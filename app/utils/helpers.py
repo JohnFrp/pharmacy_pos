@@ -578,3 +578,115 @@ def create_customer(name, phone=None, email=None, address=None):
     db.session.add(customer)
     db.session.commit()
     return customer
+    
+
+
+def get_sales_report(start_date=None, end_date=None):
+    from sqlalchemy.orm import joinedload
+    query = SaleTransaction.query.options(
+        joinedload(SaleTransaction.customer),
+        joinedload(SaleTransaction.user)
+    ).filter(SaleTransaction.payment_status == 'completed')
+    
+    if start_date and end_date:
+        query = query.filter(SaleTransaction.sale_date.between(start_date, end_date))
+    elif start_date:
+        query = query.filter(SaleTransaction.sale_date >= start_date)
+    elif end_date:
+        query = query.filter(SaleTransaction.sale_date <= end_date)
+    
+    return query.order_by(SaleTransaction.sale_date.desc()).all()
+
+def get_daily_sales_chart_data(days=30):
+    from sqlalchemy import func
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    # Get daily sales data
+    daily_sales = db.session.query(
+        func.date(SaleTransaction.sale_date).label('sale_date'),
+        func.sum(SaleTransaction.total_amount).label('total_sales'),
+        func.count(SaleTransaction.id).label('transaction_count')
+    ).filter(
+        SaleTransaction.sale_date.between(start_date, end_date),
+        SaleTransaction.payment_status == 'completed'
+    ).group_by(
+        func.date(SaleTransaction.sale_date)
+    ).order_by(
+        func.date(SaleTransaction.sale_date)
+    ).all()
+    
+    # Format data for chart
+    dates = []
+    sales = []
+    transactions = []
+    
+    for day in daily_sales:
+        dates.append(day.sale_date.strftime('%Y-%m-%d'))
+        sales.append(float(day.total_sales) if day.total_sales else 0)
+        transactions.append(day.transaction_count)
+    
+    return {
+        'dates': dates,
+        'sales': sales,
+        'transactions': transactions
+    }
+
+def get_sales_summary():
+    from sqlalchemy import func, and_
+    # Total medications (exclude deleted)
+    total_medications = Medication.query.filter_by(deleted=False).count()
+    
+    # Low stock count (exclude deleted)
+    low_stock_count = Medication.query.filter(
+        and_(
+            Medication.stock_quantity <= 10,
+            Medication.deleted == False
+        )
+    ).count()
+    
+    # Expired medications count (exclude deleted)
+    expired_count = Medication.query.filter(
+        and_(
+            Medication.expiry_date.isnot(None),
+            Medication.expiry_date < datetime.now().date(),
+            Medication.deleted == False
+        )
+    ).count()
+    
+    # Today's sales
+    today = datetime.now().date()
+    today_sales = db.session.query(
+        func.coalesce(func.sum(SaleTransaction.total_amount), 0)
+    ).filter(
+        func.date(SaleTransaction.sale_date) == today,
+        SaleTransaction.payment_status == 'completed'
+    ).scalar()
+    
+    # Month sales
+    current_month = datetime.now().strftime('%Y-%m')
+    month_sales = db.session.query(
+        func.coalesce(func.sum(SaleTransaction.total_amount), 0)
+    ).filter(
+        func.to_char(SaleTransaction.sale_date, 'YYYY-MM') == current_month,
+        SaleTransaction.payment_status == 'completed'
+    ).scalar()
+    
+    # Today's profit
+    today_profit = db.session.query(
+        func.coalesce(func.sum(SaleItem.quantity * (SaleItem.unit_price - Medication.cost_price)), 0)
+    ).join(Medication, SaleItem.medication_id == Medication.id
+    ).join(SaleTransaction, SaleItem.sale_id == SaleTransaction.id
+    ).filter(
+        func.date(SaleTransaction.sale_date) == today,
+        SaleTransaction.payment_status == 'completed'
+    ).scalar()
+    
+    return {
+        'total_medications': total_medications,
+        'low_stock_count': low_stock_count,
+        'expired_count': expired_count,
+        'today_sales': float(today_sales),
+        'month_sales': float(month_sales),
+        'today_profit': float(today_profit) if today_profit else 0
+    }
