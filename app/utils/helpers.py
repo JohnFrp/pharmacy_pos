@@ -396,3 +396,163 @@ def get_medications_with_stock():
         )
     ).order_by(Medication.name).all()
     return medications
+
+
+def process_sale_transaction(items, customer_id, user_id, payment_method, discount=0, tax_rate=0, notes=None):
+    """
+    Process a complete sale transaction with multiple items
+    """
+    try:
+        # Validate items
+        if not items or len(items) == 0:
+            raise Exception("No items in cart")
+        
+        # Calculate totals
+        subtotal = 0
+        for item in items:
+            # Ensure all required fields are present
+            if 'medication_id' not in item:
+                raise Exception("Missing medication_id in item")
+            if 'unit_price' not in item:
+                raise Exception("Missing unit_price in item")
+            if 'quantity' not in item:
+                raise Exception("Missing quantity in item")
+            
+            # Convert to proper types
+            item['medication_id'] = int(item['medication_id'])
+            item['unit_price'] = float(item['unit_price'])
+            item['quantity'] = int(item['quantity'])
+            
+            subtotal += item['quantity'] * item['unit_price']
+        
+        tax_amount = subtotal * tax_rate
+        total_amount = subtotal + tax_amount - discount
+        
+        # Generate transaction ID
+        transaction_id = f"TXN{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        
+        # Create sale transaction
+        from app.models import SaleTransaction, SaleItem, Medication
+        sale = SaleTransaction(
+            transaction_id=transaction_id,
+            customer_id=customer_id,
+            user_id=user_id,
+            total_amount=total_amount,
+            tax_amount=tax_amount,
+            discount_amount=discount,
+            payment_method=payment_method,
+            notes=notes
+        )
+        
+        db.session.add(sale)
+        db.session.flush()  # Get the sale ID without committing
+        
+        # Add sale items and update inventory
+        for item in items:
+            medication = Medication.query.get(item['medication_id'])
+            if not medication:
+                raise Exception(f"Medication with ID {item['medication_id']} not found")
+            
+            if medication.stock_quantity < item['quantity']:
+                raise Exception(f"Not enough stock for {medication.name}. Available: {medication.stock_quantity}")
+            
+            # Create sale item
+            sale_item = SaleItem(
+                sale_id=sale.id,
+                medication_id=item['medication_id'],
+                quantity=item['quantity'],
+                unit_price=item['unit_price'],
+                total_price=item['quantity'] * item['unit_price']
+            )
+            db.session.add(sale_item)
+            
+            # Update medication stock
+            medication.stock_quantity -= item['quantity']
+        
+        db.session.commit()
+        return sale
+        
+    except Exception as e:
+        db.session.rollback()
+        raise e
+
+def get_sale_details(sale_id):
+    from sqlalchemy.orm import joinedload
+    return SaleTransaction.query.options(
+        joinedload(SaleTransaction.items).joinedload(SaleItem.medication),
+        joinedload(SaleTransaction.customer),
+        joinedload(SaleTransaction.user)
+    ).get(sale_id)
+
+def get_filtered_sales(filter_type):
+    from sqlalchemy.orm import joinedload
+    from sqlalchemy import func
+    
+    query = SaleTransaction.query.options(
+        joinedload(SaleTransaction.customer),
+        joinedload(SaleTransaction.user)
+    ).filter(SaleTransaction.payment_status == 'completed')
+    
+    if filter_type == 'today':
+        today = datetime.now().date()
+        query = query.filter(func.date(SaleTransaction.sale_date) == today)
+    elif filter_type == 'week':
+        week_ago = datetime.now() - timedelta(days=7)
+        query = query.filter(SaleTransaction.sale_date >= week_ago)
+    elif filter_type == 'month':
+        current_month = datetime.now().strftime('%Y-%m')
+        query = query.filter(func.to_char(SaleTransaction.sale_date, 'YYYY-MM') == current_month)
+    
+    sales = query.order_by(SaleTransaction.sale_date.desc()).all()
+    return sales
+
+def get_sales_report(start_date=None, end_date=None):
+    from sqlalchemy.orm import joinedload
+    query = SaleTransaction.query.options(
+        joinedload(SaleTransaction.customer),
+        joinedload(SaleTransaction.user)
+    ).filter(SaleTransaction.payment_status == 'completed')
+    
+    if start_date and end_date:
+        query = query.filter(SaleTransaction.sale_date.between(start_date, end_date))
+    elif start_date:
+        query = query.filter(SaleTransaction.sale_date >= start_date)
+    elif end_date:
+        query = query.filter(SaleTransaction.sale_date <= end_date)
+    
+    return query.order_by(SaleTransaction.sale_date.desc()).all()
+
+def get_daily_sales_chart_data(days=30):
+    from sqlalchemy import func
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=days)
+    
+    # Get daily sales data
+    daily_sales = db.session.query(
+        func.date(SaleTransaction.sale_date).label('sale_date'),
+        func.sum(SaleTransaction.total_amount).label('total_sales'),
+        func.count(SaleTransaction.id).label('transaction_count')
+    ).filter(
+        SaleTransaction.sale_date.between(start_date, end_date),
+        SaleTransaction.payment_status == 'completed'
+    ).group_by(
+        func.date(SaleTransaction.sale_date)
+    ).order_by(
+        func.date(SaleTransaction.sale_date)
+    ).all()
+    
+    # Format data for chart
+    dates = []
+    sales = []
+    transactions = []
+    
+    for day in daily_sales:
+        dates.append(day.sale_date.strftime('%Y-%m-%d'))
+        sales.append(float(day.total_sales) if day.total_sales else 0)
+        transactions.append(day.transaction_count)
+    
+    return {
+        'dates': dates,
+        'sales': sales,
+        'transactions': transactions
+    }
