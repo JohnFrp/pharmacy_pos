@@ -27,6 +27,22 @@ class User(UserMixin, db.Model):
     def can_login(self):
         return self.is_active and self.is_approved
     
+    def get_id(self):
+        """Required by Flask-Login"""
+        return str(self.id)
+    
+    def is_authenticated(self):
+        """Required by Flask-Login"""
+        return True
+    
+    def is_active(self):
+        """Required by Flask-Login"""
+        return self.is_active
+    
+    def is_anonymous(self):
+        """Required by Flask-Login"""
+        return False
+    
     def __repr__(self):
         return f'<User {self.username}>'
 

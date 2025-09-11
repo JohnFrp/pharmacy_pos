@@ -35,6 +35,15 @@ def create_app():
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'warning'
     
+    # User loader callback
+    @login_manager.user_loader
+    def load_user(user_id):
+        from app.models import User
+        try:
+            return User.query.get(int(user_id))
+        except:
+            return None
+    
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.admin import admin_bp

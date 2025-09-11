@@ -38,7 +38,7 @@ def index():
                              total_users_count=total_users_count,
                              chart_data=chart_data)
     else:
-        # User is not logged in - base.html will show welcome page
+        # User is not logged in - show welcome page
         return render_template('index.html')
 
 @main_bp.route('/search')
