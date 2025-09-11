@@ -556,3 +556,25 @@ def get_daily_sales_chart_data(days=30):
         'sales': sales,
         'transactions': transactions
     }
+    
+
+
+def search_customers(search_term):
+    from sqlalchemy import or_
+    search_pattern = f'%{search_term}%'
+    return Customer.query.filter(
+        or_(
+            Customer.name.ilike(search_pattern),
+            Customer.phone.ilike(search_pattern),
+            Customer.email.ilike(search_pattern)
+        )
+    ).all()
+
+def get_customer_by_id(customer_id):
+    return Customer.query.get(customer_id)
+
+def create_customer(name, phone=None, email=None, address=None):
+    customer = Customer(name=name, phone=phone, email=email, address=address)
+    db.session.add(customer)
+    db.session.commit()
+    return customer
