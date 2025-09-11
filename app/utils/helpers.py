@@ -324,3 +324,75 @@ def get_daily_sales_chart_data(days=30):
         'sales': sales,
         'transactions': transactions
     }
+    
+    
+    
+def search_medications(search_term):
+    from sqlalchemy import and_, or_
+    search_pattern = f'%{search_term}%'
+    results = Medication.query.filter(
+        and_(
+            Medication.deleted == False,
+            or_(
+                Medication.name.ilike(search_pattern),
+                Medication.generic_name.ilike(search_pattern),
+                Medication.category.ilike(search_pattern),
+                Medication.barcode == search_term
+            )
+        )
+    ).order_by(Medication.name).all()
+    
+    return results
+
+def get_low_stock_medications(threshold=10):
+    from sqlalchemy import and_
+    results = Medication.query.filter(
+        and_(
+            Medication.stock_quantity <= threshold,
+            Medication.deleted == False
+        )
+    ).all()
+    return results
+
+def get_expired_medications():
+    from sqlalchemy import and_
+    today = datetime.now().date()
+    results = Medication.query.filter(
+        and_(
+            Medication.expiry_date.isnot(None),
+            Medication.expiry_date < today,
+            Medication.deleted == False
+        )
+    ).all()
+    return results
+
+def get_expiring_soon_medications(days=30):
+    from sqlalchemy import and_
+    today = datetime.now().date()
+    soon_date = today + timedelta(days=days)
+    results = Medication.query.filter(
+        and_(
+            Medication.expiry_date.isnot(None),
+            Medication.expiry_date >= today,
+            Medication.expiry_date <= soon_date,
+            Medication.deleted == False
+        )
+    ).all()
+    return results
+
+def get_medication_by_id(medication_id):
+    return Medication.query.get(medication_id)
+
+def get_all_medications():
+    medications = Medication.query.filter_by(deleted=False).order_by(Medication.name).all()
+    return medications
+
+def get_medications_with_stock():
+    from sqlalchemy import and_
+    medications = Medication.query.filter(
+        and_(
+            Medication.stock_quantity > 0, 
+            Medication.deleted == False
+        )
+    ).order_by(Medication.name).all()
+    return medications
