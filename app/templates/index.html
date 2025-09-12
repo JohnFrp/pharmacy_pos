@@ -61,16 +61,16 @@
             </div>
             <div class="card-body">
                 <div class="d-grid gap-2">
-                    <a href="{{ url_for('sales') }}" class="btn btn-primary">
+                    <a href="{{ url_for('sales.sales') }}" class="btn btn-primary">
                         <i class="bi bi-cart-plus"></i> Process Sale
                     </a>
-                    <a href="{{ url_for('add_medication') }}" class="btn btn-success">
+                    <a href="{{ url_for('inventory.add_medication') }}" class="btn btn-success">
                         <i class="bi bi-plus-circle"></i> Add Medication
                     </a>
-                    <a href="{{ url_for('import_medications') }}" class="btn btn-info">
+                    <a href="{{ url_for('inventory.import_medications') }}" class="btn btn-info">
                         <i class="bi bi-upload"></i> Import Medications
                     </a>
-                    <a href="{{ url_for('search') }}" class="btn btn-warning">
+                    <a href="{{ url_for('main.search') }}" class="btn btn-warning">
                         <i class="bi bi-search"></i> Search Medications
                     </a>
                 </div>
@@ -84,13 +84,13 @@
             </div>
             <div class="card-body">
                 <div class="list-group">
-                    <a href="{{ url_for('inventory', filter='low_stock') }}" class="list-group-item list-group-item-warning">
+                    <a href="{{ url_for('inventory.inventory', filter='low_stock') }}" class="list-group-item list-group-item-warning">
                         <i class="bi bi-exclamation-triangle"></i> Low Stock Items: {{ stats.low_stock_count }}
                     </a>
-                    <a href="{{ url_for('inventory', filter='expired') }}" class="list-group-item list-group-item-danger">
+                    <a href="{{ url_for('inventory.inventory', filter='expired') }}" class="list-group-item list-group-item-danger">
                         <i class="bi bi-x-circle"></i> Expired Medications: {{ stats.expired_count }}
                     </a>
-                    <a href="{{ url_for('inventory', filter='expiring_soon') }}" class="list-group-item list-group-item-info">
+                    <a href="{{ url_for('inventory.inventory', filter='expiring_soon') }}" class="list-group-item list-group-item-info">
                         <i class="bi bi-clock"></i> Expiring Soon: {{ expiring_soon_count }}
                     </a>
                 </div>
@@ -191,10 +191,10 @@
 
                 <!-- Buttons -->
                 <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mb-5">
-                    <a href="{{ url_for('login') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold shadow-lg">
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold shadow-lg">
                         <i class="bi bi-box-arrow-in-right me-2"></i> Login
                     </a>
-                    <a href="{{ url_for('register') }}" class="btn btn-outline-light btn-lg px-5 py-3 fw-bold shadow">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-light btn-lg px-5 py-3 fw-bold shadow">
                         <i class="bi bi-person-plus me-2"></i> Register
                     </a>
                 </div>
@@ -205,7 +205,7 @@
                          style="background: rgba(255,255,255,0.15); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);">
                         <h2 class="mb-3">Ready to Transform Your Pharmacy?</h2>
                         <p class="mb-4 fs-5">Join hundreds of successful pharmacies using our system daily</p>
-                        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold rounded-pill">
+                        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5 py-3 fw-bold rounded-pill">
                             <i class="bi bi-rocket-takeoff me-2"></i> Get Start
                         </a>
                     </div>
@@ -247,7 +247,7 @@
 <!-- <script>
     // Redirect to home which will show the welcome page
     setTimeout(() => {
-        window.location.href = "{{ url_for('index') }}";
+        window.location.href = "{{ url_for('main.index') }}";
     }, 1000);
 </script> -->
 {% endif %}
