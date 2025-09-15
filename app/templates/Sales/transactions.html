@@ -204,7 +204,7 @@
                                 <span class="badge bg-primary rounded-pill">{{ sale.items|length }}</span>
                             </td>
                             <td>
-                                <span class="fw-bold">${{ "%.2f"|format(sale.total_amount) }}</span>
+                                <span class="fw-bold">{{ "MMK {:,.2f}".format(sale.total_amount) }}</span>
                             </td>
                             <td>
                                 <span class="badge bg-{% if sale.payment_method == 'cash' %}success{% elif sale.payment_method == 'card' %}info{% elif sale.payment_method == 'digital' %}warning{% else %}secondary{% endif %} text-uppercase">
@@ -216,10 +216,10 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm">
-                                    <a href="{{ url_for('sales.receipt', sale_id=sale.id) }}" class="btn btn-outline-primary" title="View Receipt">
+                                    <a href="{{ url_for('sales.view_receipt', sale_id=sale.id) }}" class="btn btn-outline-primary" title="View Receipt">
                                         <i class="fas fa-receipt"></i>
                                     </a>
-                                    <a href="{{ url_for('sales.transaction', sale_id=sale.id) }}" class="btn btn-outline-info" title="View Details">
+                                    <a href="{{ url_for('sales.transactions', sale_id=sale.id) }}" class="btn btn-outline-info" title="View Details">
                                         <i class="fas fa-eye"></i>
                                     </a>
                                     <button class="btn btn-outline-danger" title="Void Transaction" disabled>

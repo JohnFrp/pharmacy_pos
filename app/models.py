@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='user', nullable=False)
     created_at = db.Column(db.DateTime, server_default=func.now())
-    is_active = db.Column(db.Boolean, default=False, nullable=False)
+    is_active = db.Column(db.Boolean, nullable=False, default=True)
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
     
     def set_password(self, password, method='pbkdf2:sha256'):

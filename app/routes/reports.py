@@ -7,12 +7,46 @@ from datetime import datetime, timedelta
 import pandas as pd
 from io import BytesIO
 
-reports_bp = Blueprint('reports', __name__)
+reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 @reports_bp.route('/')
 @login_required
 def reports():
-    return render_template('reports/reports.html')
+    """
+    Renders the main reports dashboard and fetches data for the 'Quick Stats' card.
+    """
+    # 1. Fetch total number of active medications
+    total_medications = Medication.query.filter_by(deleted=False).count()
+
+    # 2. Calculate today's total sales
+    today = date.today()
+    today_sales = db.session.query(
+        func.coalesce(func.sum(SaleTransaction.total_amount), 0)
+    ).filter(func.date(SaleTransaction.sale_date) == today).scalar()
+
+    # 3. Count low stock items (e.g., quantity <= 10)
+    low_stock_threshold = 10
+    low_stock_count = Medication.query.filter(
+        Medication.stock_quantity <= low_stock_threshold,
+        Medication.deleted == False
+    ).count()
+    
+    # 4. Fetch total number of customers
+    total_customers = Customer.query.count()
+    
+    # 5. Group stats into a dictionary for the template
+    stats = {
+        'total_medications': total_medications,
+        'today_sales': today_sales,
+        'low_stock_count': low_stock_count
+    }
+    
+    # 6. Render the template with the fetched data
+    return render_template(
+        'reports/reports.html', 
+        stats=stats, 
+        total_customers=total_customers
+    )
 
 @reports_bp.route('/sales')
 @login_required
@@ -220,13 +254,13 @@ def export_profit_report():
 def api_sales_chart():
     days = int(request.args.get('days', 30))
     chart_data = get_daily_sales_chart_data(days)
-    return jsonify(chart_data)
+    return jsonify({'status': 'success', 'data': chart_data})
 
 @reports_bp.route('/api/sales_summary')
 @login_required
 def api_sales_summary():
     stats = get_sales_summary()
-    return jsonify(stats)
+    return jsonify({'status': 'success', 'data': stats})
 
 @reports_bp.route('/customer')
 @login_required

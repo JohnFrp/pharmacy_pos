@@ -499,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('paymentMethod').value = 'cash';
                 
                 // Redirect to receipt
-                window.location.href = "{{ url_for('sales.receipt', sale_id=0) }}".replace('0', data.sale_id);
+                window.location.href = "{{ url_for('sales.view_receipt', sale_id=0) }}".replace('0', data.sale_id);
             } else {
                 alert('Error: ' + data.error);
             }

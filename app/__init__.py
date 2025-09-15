@@ -19,7 +19,7 @@ def create_app():
     except Exception as e:
         print(f"❌ Error loading config: {e}")
         # Fallback to direct configuration
-        DATABASE_URI = "postgresql://db_7xk8_user:GJqN6o43COFJFcaX7ZsbmBnPoZk2O6bu@dpg-d30ojvemcj7s73eabu8g-a.singapore-postgres.render.com/db_7xk8"
+        DATABASE_URI = "postgresql://db_ebsl_user:lpUNVkJAuqLjlvjPry2WjB3RJyS3wl1i@dpg-d33u4uer433s738s8p40-a.singapore-postgres.render.com/db_ebsl"
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'pharmacy-pos-secret-key')
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

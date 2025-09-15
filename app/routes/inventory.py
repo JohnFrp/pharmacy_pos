@@ -10,7 +10,7 @@ from io import BytesIO
 
 inventory_bp = Blueprint('inventory', __name__)
 
-@inventory_bp.route('/')
+@inventory_bp.route('/inventory')
 @login_required
 def inventory():
     filter_type = request.args.get('filter', 'all')

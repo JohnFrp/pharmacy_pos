@@ -6,7 +6,7 @@
         <h1>Import Medications</h1>
     </div>
     <div class="col-auto">
-        <a href="{{ url_for('generate_sample_excel') }}" class="btn btn-info">
+        <a href="{{ url_for('inventory.generate_sample_excel') }}" class="btn btn-info">
             <i class="bi bi-download"></i> Download Sample
         </a>
     </div>
@@ -19,7 +19,7 @@
                 <h5 class="card-title">Import from Excel</h5>
             </div>
             <div class="card-body">
-                <form method="POST" action="{{ url_for('import_medications') }}" enctype="multipart/form-data">
+                <form method="POST" action="{{ url_for('inventory.import_medications') }}" enctype="multipart/form-data">
                     <div class="mb-3">
                         <label for="file" class="form-label">Excel File</label>
                         <input type="file" class="form-control" id="file" name="file" accept=".xlsx,.xls" required>

@@ -1,27 +1,62 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for
+# FIX: Added jsonify and or_ to imports
+from flask import Blueprint, render_template, request, flash, redirect, url_for, jsonify
 from flask_login import login_required
+from sqlalchemy import func, or_, desc
 from app import db
-from app.models import Customer
+from app.models import Customer, SaleTransaction # Assuming SaleTransaction model is available
 
-customers_bp = Blueprint('customers', __name__)
+customers_bp = Blueprint('customers', __name__, url_prefix='/customers')
 
 @customers_bp.route('/')
 @login_required
 def customers():
-    search_term = request.args.get('q', '')
-    if search_term:
-        customers = search_customers(search_term)
-    else:
-        customers = Customer.query.order_by(Customer.name).all()
+    # --- Main Query for the Customer List ---
+    # Gets each customer with their total sales count and amount spent in one go.
+    customers_query = db.session.query(
+        Customer,
+        func.count(SaleTransaction.id).label('sales_count'),
+        func.coalesce(func.sum(SaleTransaction.total_amount), 0).label('total_spent')
+    ).outerjoin(SaleTransaction).group_by(Customer.id)
     
-    return render_template('customers/customers.html', customers=customers, search_term=search_term)
+    # --- Additional Queries for Statistics ---
+    # These are now fast because they are simple, direct queries.
+    total_revenue = db.session.query(func.sum(SaleTransaction.total_amount)).scalar() or 0
+    
+    active_customer_count = db.session.query(
+        func.count(Customer.id.distinct())
+    ).join(SaleTransaction).scalar()
+    
+    new_customer_count = db.session.query(func.count(Customer.id))\
+        .filter(Customer.sales == None).scalar()
+
+    # --- Queries for Customer Insights ---
+    top_spender = customers_query.order_by(desc('total_spent')).first()
+    most_frequent = customers_query.order_by(desc('sales_count')).first()
+    newest_customer = Customer.query.order_by(Customer.created_at.desc()).first()
+    
+    # --- Pass all pre-calculated data to the template ---
+    return render_template(
+        'customers/customers.html', 
+        customers=customers_query.order_by(Customer.name).all(),
+        total_revenue=total_revenue,
+        active_customer_count=active_customer_count,
+        new_customer_count=new_customer_count,
+        top_spender=top_spender[0] if top_spender else None,
+        most_frequent_customer=most_frequent[0] if most_frequent else None,
+        newest_customer=newest_customer
+    )
 
 @customers_bp.route('/add', methods=['GET', 'POST'])
 @login_required
 def add_customer():
     if request.method == 'POST':
+        # IMPROVEMENT: Use .get() and add validation
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Customer name is required.', 'danger')
+            return render_template('customers/add_customer.html')
+
         try:
-            name = request.form['name']
             phone = request.form.get('phone', '')
             email = request.form.get('email', '')
             address = request.form.get('address', '')
@@ -45,8 +80,13 @@ def edit_customer(id):
     customer = Customer.query.get_or_404(id)
     
     if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Customer name is required.', 'danger')
+            return render_template('customers/edit_customer.html', customer=customer)
+            
         try:
-            customer.name = request.form['name']
+            customer.name = name
             customer.phone = request.form.get('phone', '')
             customer.email = request.form.get('email', '')
             customer.address = request.form.get('address', '')
@@ -62,13 +102,12 @@ def edit_customer(id):
     
     return render_template('customers/edit_customer.html', customer=customer)
 
-@customers_bp.route('/delete/<int:id>')
+@customers_bp.route('/delete/<int:id>', methods=['POST']) # FIX: Changed to POST
 @login_required
 def delete_customer(id):
     customer = Customer.query.get_or_404(id)
     
     try:
-        # Check if customer has any sales
         if customer.sales:
             flash('Cannot delete customer with existing sales records.', 'danger')
             return redirect(url_for('customers.customers'))
@@ -88,38 +127,26 @@ def view_customer(id):
     customer = Customer.query.get_or_404(id)
     return render_template('customers/view_customer.html', customer=customer)
 
+# --- API ---
 @customers_bp.route('/api/search')
 @login_required
 def api_customers_search():
     search_term = request.args.get('q', '')
-    customers = search_customers(search_term) if search_term else Customer.query.order_by(Customer.name).all()
     
-    results = []
-    for customer in customers:
-        results.append({
-            'id': customer.id,
-            'name': customer.name,
-            'phone': customer.phone,
-            'email': customer.email,
-            'address': customer.address
-        })
+    # IMPROVEMENT: Use a helper or inline query for clarity
+    query = Customer.query
+    if search_term:
+        search_pattern = f'%{search_term}%'
+        query = query.filter(
+            or_(
+                Customer.name.ilike(search_pattern),
+                Customer.phone.ilike(search_pattern),
+                Customer.email.ilike(search_pattern)
+            )
+        )
+    customers = query.order_by(Customer.name).all()
     
-    return results
-
-# Helper functions
-def search_customers(search_term):
-    search_pattern = f'%{search_term}%'
-    return Customer.query.filter(
-        Customer.name.ilike(search_pattern) |
-        Customer.phone.ilike(search_pattern) |
-        Customer.email.ilike(search_pattern)
-    ).all()
-
-def get_customer_by_id(customer_id):
-    return Customer.query.get(customer_id)
-
-def create_customer(name, phone=None, email=None, address=None):
-    customer = Customer(name=name, phone=phone, email=email, address=address)
-    db.session.add(customer)
-    db.session.commit()
-    return customer
+    # IMPROVEMENT: Use a to_dict() method on the model for cleaner serialization
+    results = [customer.to_dict() for customer in customers]
+    
+    return jsonify(results) # FIX: Return a proper JSON response
