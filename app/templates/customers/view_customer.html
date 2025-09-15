@@ -84,7 +84,7 @@
                         Last Purchase
                         <span class="badge bg-secondary rounded-pill">
                             {% if customer.sales %}
-                                {{ customer.sales|sort(attribute='sale_date', reverse=true)|first.sale_date.strftime('%Y-%m-%d') }}
+                                {{ (customer.sales|sort(attribute='sale_date', reverse=true)|first).sale_date.strftime('%Y-%m-%d') }}
                             {% else %}
                                 Never
                             {% endif %}

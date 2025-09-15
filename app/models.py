@@ -12,7 +12,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='user', nullable=False)
     created_at = db.Column(db.DateTime, server_default=func.now())
-    is_active = db.Column(db.Boolean, nullable=False, default=True)
+    is_active = db.Column(db.Boolean, default=False, nullable=False)
     is_approved = db.Column(db.Boolean, default=False, nullable=False)
     
     def set_password(self, password, method='pbkdf2:sha256'):
@@ -27,25 +27,10 @@ class User(UserMixin, db.Model):
     def can_login(self):
         return self.is_active and self.is_approved
     
-    def get_id(self):
-        """Required by Flask-Login"""
-        return str(self.id)
-    
-    def is_authenticated(self):
-        """Required by Flask-Login"""
-        return True
-    
-    def is_active(self):
-        """Required by Flask-Login"""
-        return self.is_active
-    
-    def is_anonymous(self):
-        """Required by Flask-Login"""
-        return False
-    
     def __repr__(self):
         return f'<User {self.username}>'
 
+# Define models
 class Medication(db.Model):
     __tablename__ = 'medications'
 
@@ -54,7 +39,7 @@ class Medication(db.Model):
     generic_name = db.Column(db.String(255), nullable=True)
     manufacturer = db.Column(db.String(255), nullable=True)
     price = db.Column(db.Numeric(10, 2), nullable=False)
-    cost_price = db.Column(db.Numeric(10, 2), nullable=True)
+    cost_price = db.Column(db.Numeric(10, 2), nullable=True)  # Added for profit calculation
     stock_quantity = db.Column(db.Integer, nullable=False)
     expiry_date = db.Column(db.Date, nullable=True)
     category = db.Column(db.String(100), nullable=True)
@@ -62,6 +47,7 @@ class Medication(db.Model):
     created_at = db.Column(db.DateTime, server_default=func.now())
     deleted = db.Column(db.Boolean, default=False, nullable=False)
     
+    # Relationship to sale items
     sale_items = db.relationship('SaleItem', backref='medication', lazy=True)
 
     def __repr__(self):
@@ -77,17 +63,8 @@ class Customer(db.Model):
     address = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=func.now())
     
+    # Relationship to sales
     sales = db.relationship('SaleTransaction', backref='customer', lazy=True)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'name': self.name,
-            'phone': self.phone,
-            'email': self.email,
-            'address': self.address,
-            'created_at': self.created_at.isoformat() if self.created_at else None
-        }
     
     def __repr__(self):
         return f"<Customer {self.name}>"
@@ -102,11 +79,12 @@ class SaleTransaction(db.Model):
     total_amount = db.Column(db.Numeric(10, 2), nullable=False)
     tax_amount = db.Column(db.Numeric(10, 2), default=0)
     discount_amount = db.Column(db.Numeric(10, 2), default=0)
-    payment_method = db.Column(db.String(20), nullable=False)
-    payment_status = db.Column(db.String(20), default='completed')
+    payment_method = db.Column(db.String(20), nullable=False)  # cash, card, digital, etc.
+    payment_status = db.Column(db.String(20), default='completed')  # completed, pending, refunded
     sale_date = db.Column(db.DateTime, server_default=func.now())
     notes = db.Column(db.Text, nullable=True)
     
+    # Relationships
     user = db.relationship('User', backref='sales')
     items = db.relationship('SaleItem', backref='sale_transaction', lazy=True, cascade='all, delete-orphan')
     

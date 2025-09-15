@@ -1,7 +1,7 @@
 import os
 
 # Database URI
-DATABASE_URI = "postgresql://db_ebsl_user:lpUNVkJAuqLjlvjPry2WjB3RJyS3wl1i@dpg-d33u4uer433s738s8p40-a.singapore-postgres.render.com/db_ebsl"
+DATABASE_URI = "postgresql://db_8r3u_user:DGDcY0ZgPDAuokXtbbYfkuiiKr8FerKl@dpg-d340a9mr433s738tss8g-a.singapore-postgres.render.com/db_8r3u"
 
 SECRET_KEY = os.environ.get('SECRET_KEY', 'pharmacy-pos-secret-key')
 SQLALCHEMY_DATABASE_URI = DATABASE_URI
