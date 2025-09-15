@@ -117,7 +117,7 @@ def sales():
                 })
             else:
                 flash(f'Sale completed successfully! Transaction ID: {sale.transaction_id}', 'success')
-                return redirect(url_for('sales.view_receipt', sale_id=sale.id))
+                return redirect(url_for('sales.receipt', sale_id=sale.id))
             
         except Exception as e:
             error_msg = f'Error processing sale: {str(e)}'
