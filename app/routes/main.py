@@ -13,37 +13,7 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/index')
 @login_required
 def index():
-    if current_user.is_authenticated:
-        # User is logged in - show dashboard
-        stats = get_sales_summary()
-        
-        # Get additional stats for dashboard
-        expiring_soon_count = len(get_expiring_soon_medications())
-        
-        # Get recent activity counts
-        recent_sales_count = SaleTransaction.query.filter(
-            SaleTransaction.sale_date >= datetime.now() - timedelta(days=1)
-        ).count()
-        
-        recent_medications_count = Medication.query.filter(
-            Medication.created_at >= datetime.now() - timedelta(days=7)
-        ).count()
-        
-        total_users_count = User.query.count()
-        
-        # Get chart data
-        chart_data = get_daily_sales_chart_data(7)
-        
-        return render_template('index.html', 
-                             stats=stats,
-                             expiring_soon_count=expiring_soon_count,
-                             recent_sales_count=recent_sales_count,
-                             recent_medications_count=recent_medications_count,
-                             total_users_count=total_users_count,
-                             chart_data=chart_data)
-    else:
-        # User is not logged in - base.html will show welcome page
-        return render_template('index.html')# FIX: Removed the redundant 'if current_user.is_authenticated:' check.
+    # FIX: Removed the redundant 'if current_user.is_authenticated:' check.
     # The @login_required decorator already handles this.
 
     # User is logged in - show dashboard
@@ -85,7 +55,7 @@ def search():
     if search_term:
         search_pattern = f"%{search_term}%"
         # Using the query logic from the previous step directly here
-        results = Medication.query.filter(
+        results = Medication.query.filter_by(deleted=False).filter(
             or_(
                 Medication.name.ilike(search_pattern),
                 Medication.generic_name.ilike(search_pattern),
