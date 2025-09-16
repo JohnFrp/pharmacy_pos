@@ -94,3 +94,69 @@ def register():
 @login_required
 def profile():
     return render_template('auth/profile.html', user=current_user)
+
+@auth_bp.route('/profile/edit', methods=['GET', 'POST'])
+@login_required
+def edit_profile():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        email = request.form.get('email')
+
+        # Check if new username or email already exist
+        if username != current_user.username and User.query.filter_by(username=username).first():
+            flash('Username already taken.', 'danger')
+            return redirect(url_for('auth.edit_profile'))
+
+        if email != current_user.email and User.query.filter_by(email=email).first():
+            flash('Email already registered.', 'danger')
+            return redirect(url_for('auth.edit_profile'))
+
+        current_user.username = username
+        current_user.email = email
+
+        try:
+            db.session.commit()
+            flash('Your profile has been updated.', 'success')
+            return redirect(url_for('auth.profile'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating profile: {e}', 'danger')
+
+    return render_template('auth/edit_profile.html', user=current_user)
+
+@auth_bp.route('/profile/change_password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    if request.method == 'POST':
+        current_password = request.form.get('current_password')
+        new_password = request.form.get('new_password')
+        confirm_password = request.form.get('confirm_password')
+
+        print(f"Current password entered: {current_password}")
+        print(f"New password entered: {new_password}")
+        print(f"Confirm password entered: {confirm_password}")
+
+        if not current_user.check_password(current_password):
+            print("Incorrect current password")
+            flash('Incorrect current password.', 'danger')
+            return redirect(url_for('auth.change_password'))
+
+        if new_password != confirm_password:
+            print("New passwords do not match")
+            flash('New passwords do not match.', 'danger')
+            return redirect(url_for('auth.change_password'))
+
+        current_user.set_password(new_password)
+        
+        try:
+            db.session.commit()
+            print("Password changed successfully")
+            flash('Your password has been changed successfully.', 'success')
+            return redirect(url_for('auth.profile'))
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error changing password: {e}")
+            flash(f'Error changing password: {e}', 'danger')
+    
+    return render_template('auth/change_password.html')
+
