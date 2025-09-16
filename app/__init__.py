@@ -14,8 +14,7 @@ def create_app():
     # Configuration - Load from config.py
     try:
         app.config.from_pyfile('config.py')
-        print("✅ Config file loaded successfully")
-        print(f"Database URI: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+        
     except Exception as e:
         print(f"❌ Error loading config: {e}")
         # Fallback to direct configuration
@@ -23,7 +22,7 @@ def create_app():
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'pharmacy-pos-secret-key')
         app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-        print("✅ Using fallback configuration")
+       
     
     # Initialize extensions
     db.init_app(app)
